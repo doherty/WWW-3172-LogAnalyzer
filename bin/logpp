@@ -1,0 +1,79 @@
+#!/usr/bin/env perl
+package logpp;
+use strict;
+use warnings;
+# ABSTRACT: pre-process an access log file
+# VERSION
+
+use WWW::3172::LogAnalyzer::Parser;
+use Getopt::Long;
+use Pod::Usage;
+use Data::Printer alias => 'dump';
+
+my %opts = ();
+GetOptions( \%opts,
+    'help|?',
+    'version',
+    'max=i',
+    'debug',
+);
+
+my $file = shift;
+pod2usage(
+    -verbose => 2,
+) if $opts{help} or !$file;
+
+=head1 SYNOPSIS
+
+    logpp filename.log
+    logpp --max 50 /var/log/apache2/access.log
+
+=head1 DESCRIPTION
+
+B<log-analysis> is a command line script to pre-process a web access log file,
+by parsing it and inserting data into MySQL.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--max>
+
+Specify the maximum number of lines to process - useful for testing.
+
+=item B<--help>, -h, -?
+
+Opens this man page and exits.
+
+=item B<--version>
+
+Prints the version of this program and supporting libraries.
+
+=item B<--debug>
+
+Print debugging information.
+
+=back
+
+=cut
+
+if (delete $opts{version}) {
+    my $this = __PACKAGE__;
+    my $this_ver = defined __PACKAGE__->VERSION ? __PACKAGE__->VERSION : 'dev';
+    print "$this version $this_ver\n" and exit;
+}
+
+print "Parsing " . ($opts{max} ? "$opts{max} lines of" : "") . "$file\n";
+print "Dry run -- aborting\n" and exit if $opts{'dry-run'};
+
+my $parser = WWW::3172::LogAnalyzer::Parser->new(
+    %opts,
+    file        => $file,
+    callback    => sub {
+        my %matches = @_;
+        dump %matches;
+    },
+);
+
+$parser->parse;
+
